@@ -26,7 +26,7 @@ async function handler(
     }
 
     // ChatGPT Query
-    // const response = await (prompt, chatId, model)
+    const response = await (prompt, chatId, model)
 
         res.status(200).json({
             answer: 'John Doe'
