@@ -13,6 +13,7 @@ function ChatPage({params: {id}}: Props) {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
+      {/* <p>Hello</p> */}
       <Chat chatId={id}/>
       <ChatInput chatId={id}/>
     </div>

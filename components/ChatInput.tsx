@@ -21,7 +21,7 @@ function ChatInput({ chatId }: Props) {
     const { data: session } = useSession()
 
     // TODO: useSWR to get model
-    const model = "text-davinci-003"
+    const model = "gpt-3.5-turbo"
     const sendMessage = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault()
         if (!prompt) return
@@ -47,6 +47,7 @@ function ChatInput({ chatId }: Props) {
         //Toast notification to say loading!
         const notificaiton=toast.loading('CCLBot is thinking...')
 
+        console.log('Asking ChatGPT...')
         await fetch('/api/askQuestion', {
             method: 'POST',
             headers: {
@@ -60,6 +61,7 @@ function ChatInput({ chatId }: Props) {
             }),
         }).then(() => {
             // toast notificaiton to say successful
+            
             toast.success('CCLBot has responded', {
                 id: notificaiton,  
             }

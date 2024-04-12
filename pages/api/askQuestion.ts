@@ -28,6 +28,7 @@ async function handler(
         return
     }
 
+    
     // ChatGPT Query
     const response = await query(prompt, chatId, model)
 
