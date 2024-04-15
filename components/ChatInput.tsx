@@ -39,6 +39,8 @@ function ChatInput({ chatId }: Props) {
             }
             // type: ""
         }
+        
+
 
         await addDoc(collection(db, 'users', session?.user?.email!, 'chats', chatId, 'messages'),
             message
@@ -70,7 +72,7 @@ function ChatInput({ chatId }: Props) {
     }
 
     return (
-        <div className="bg-gray-700/50 text-gray-400 rounded-lg text-sm">
+        <div className="sticky bg-gray-700/50 text-gray-400 rounded-lg text-sm">
             <form onSubmit={sendMessage} className="p-5 space-x-5 flex">
                 <input
                     className="bg-transparent focus:outline-none flex-1

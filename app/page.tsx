@@ -1,5 +1,6 @@
 import React from 'react'
 import { BoltIcon, ExclamationTriangleIcon, SunIcon } from '@heroicons/react/24/outline'
+import Image from 'next/image'
 // import Chat from "@/components/Chat";
 
 function HomePage() {
@@ -8,6 +9,7 @@ function HomePage() {
     h-screen px-2 text-white'>
       <h1 className='text-xl font-bold mb-20 text-center'>CCL Chatbot</h1>
 
+      {/* <Image src="/images/aibot.png" alt="Aibot" width={100} height={100} /> */}
       <div className='flex text-xs space-x-2 text-center'>
         <div>
           <div className='flex flex-col items-center mb-5 justify-center'>
