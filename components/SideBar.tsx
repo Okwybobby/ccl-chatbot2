@@ -39,10 +39,19 @@ function SideBar() {
                         <ModelSelection />
                     </div>
 
-                    {/* Map through the ChatRows */}
-                    {chats?.docs.map(chat => (
-                        <ChatRow key={chat.id} id={chat.id} />
-                    ))}
+                    <div className="flex flex-col space-y-2 my-2">
+                        {loading && (
+                            <div className="animate-pulse text-center text-white">
+                                <p>Loading Chats...</p>
+                            </div>
+                        )}
+                        {/* Map through the ChatRows */}
+                        {chats?.docs.map(chat => (
+                            <ChatRow key={chat.id} id={chat.id} />
+                        ))}
+                    </div>
+
+
                 </div>
             </div>
             <a className="flex py-3 px-3 items-center gap-3 rounded-md hover:bg-gray-500/10 transition-colors duration-200 text-white cursor-pointer text-sm">
