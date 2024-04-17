@@ -1,9 +1,35 @@
+"use client"
+
 import React from 'react'
 import { BoltIcon, ExclamationTriangleIcon, SunIcon } from '@heroicons/react/24/outline'
 import Image from 'next/image'
+import { useSession } from "next-auth/react";
+import { useRouter } from 'next/navigation'; // Import useRouter hook
 // import Chat from "@/components/Chat";
 
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { db } from "../firebase";
+
 function HomePage() {
+
+  const router = useRouter(); // Initialize useRouter hook
+  const { data: session } = useSession();
+
+  const handleProposalClick = async () => {
+    // Navigate to the proposal page
+
+    console.log("Okwy Proposal Page")
+    const doc = await addDoc(
+      collection(db, "users", session?.user?.email!, "chats"), {
+      userId: session?.user?.email!,
+      createdAt: serverTimestamp()
+    }
+    )
+
+    router.push(`/proposal/${doc.id}`)
+    // router.push('/proposal'); // Modify the path as needed
+  };
+
   return (
     <div className='flex flex-col items-center justify-center 
     h-screen px-2 text-white'>
@@ -18,15 +44,15 @@ function HomePage() {
             <h2>Proposal</h2>
           </div>
 
+          {/* <div onClick={createNewProposal} className='space-y-2'> */}
           <div className='space-y-2'>
             <button id="proposal"
+              onClick={handleProposalClick}
               className="bg-gray-600 min-w-max text-xs hover:bg-gray-700 py-4 px-4 mx-4  my-2 rounded-md">Write
               Proposal →</button>
             {/* <p className='infoText'>Explain Somethin to me</p>
             <p className='infoText'>Explain xyz</p>
             <p className='infoText'>Explain abc</p> */}
-
-
           </div>
         </div>
 
