@@ -1,0 +1,673 @@
+import { useState, useEffect, FormEvent } from 'react';
+import { useSession } from "next-auth/react";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import toast from "react-hot-toast";
+import useSWR from "swr";
+import PaperAirplaneIcon from '@heroicons/react/24/outline/PaperAirplaneIcon';
+import ModelSelection from './ModelSelection';
+import { db } from '@/firebase';
+
+type Props = {
+    chatId: string
+}
+
+interface IMessage {
+    id: string;
+    text: string;
+    createdAt: Date;
+    user: {
+        _id: string;
+        name: string;
+        avatar: string;
+    };
+}
+
+
+function ChatGenInput({ chatId }: Props) {
+    const [prompt, setPrompt] = useState("");
+    const { data: session } = useSession();
+
+    const [messages, setMessages] = useState<IMessage[]>([]);
+
+    const { data: model } = useSWR("model", {
+        fallbackData: "gpt-3.5-turbo"
+    });
+
+    // const sendMessage = async (e: FormEvent<HTMLFormElement>) => {
+    //     e.preventDefault();
+    //     if (!prompt || !session) return;
+
+    //     const input = prompt.trim();
+    //     setPrompt("");
+
+    //     try {
+    //         const response = await fetch('/api/askGenQuestion', {
+    //             method: 'POST',
+    //             headers: {
+    //                 'Content-Type': 'application/json',
+    //             },
+    //             body: JSON.stringify({
+    //                 prompt: input,
+    //                 chatId,
+    //                 session,
+    //             }),
+    //         });
+
+    //         const { answer } = await response.json();
+    //         // Update UI with streaming text
+    //         setPrompt(""); // Clear the prompt field
+    //         appendMessageToUI(answer); // Append the new message to the UI
+
+    //         // Display success toast notification
+    //         toast.success('CCLBot has responded');
+    //     } catch (error) {
+    //         console.error('Error ChatGenInput:', error);
+    //         toast.error('Error communicating with server');
+    //     }
+    // };
+
+    // Function to append a new message to the UI
+
+    const sendMessage = async (e: FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        console.log("Prompt: ", prompt);
+        console.log("Session: ", session);
+
+        if (!prompt || !session) return;
+
+        try {
+            //Toast notification to say loading!
+            const notificaiton = toast.loading('CCLBot is thinking...')
+
+            const response = await fetch('/api/askGenQuestion', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ prompt, chatId, session }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch');
+            }
+
+            const reader = response.body?.getReader();
+            if (!reader) {
+                throw new Error('Response body is not readable');
+            }
+
+            let messages = []; // Array to store received messages
+
+            while (true) {
+                const { done, value } = await reader.read();
+                // console.log(value, "... ")
+                if (done) {
+                    console.log('Stream has ended');
+                    break;
+                }
+
+                const messageText = new TextDecoder().decode(value);
+                messages.push({
+                    text: messageText, createdAt: new Date(), user: {
+                        _id: "CCLBot",
+                        name: "CCLBot",
+                        avatar: "/images/favicon.png"
+                    }
+                });
+
+                // Update UI with the received message chunk (call a function in Chat2.tsx)
+                updateChatMessages(messages); // This function needs to be implemented in Chat2.tsx
+                messages = []; // Reset the messages array for the next iteration
+            }
+        } catch (error) {
+            console.error('Error ChatGenInput:', error);
+            toast.error('Error communicating with server');
+        }
+    };
+
+    // Function to update chat messages in Chat2.tsx (implementation in next step)
+    const updateChatMessages = (messages: Message[]) => {
+        console.log(messages)
+        // setMessages((prevMessages) => [...prevMessages, ...newMessages]);
+        // Implement logic to update the state or props in Chat2.tsx to reflect the new messages
+    };
+
+
+
+    const appendMessageToUI = async (messageText: string) => {
+        const message: Message = {
+            text: messageText,
+            createdAt: new Date(),
+            user: {
+                _id: session?.user?.email!,
+                name: session?.user?.name!,
+                avatar: session?.user?.image! || `https://ui-avatars.com/api/?name=${session?.user?.name}`,
+            }
+        };
+
+        // Add the message to Firestore
+        await addDoc(collection(db, 'users', session?.user?.email!, 'chats', chatId, 'messages'), message);
+    };
+
+    return (
+        <div className="sticky bg-gray-700/50 text-gray-400 rounded-lg text-sm">
+            <form onSubmit={sendMessage} className="p-5 space-x-5 flex">
+                <input
+                    className="bg-transparent focus:outline-none flex-1 disabled:cursor-not-allowed disabled:text-gray-300"
+                    disabled={!session}
+                    value={prompt}
+                    onChange={e => setPrompt(e.target.value)}
+                    type="text"
+                    placeholder="Type your message here..."
+                />
+
+                <button
+                    disabled={!prompt || !session}
+                    type="submit"
+                    className="bg-[#11A37F] hover:opacity-50 text-white font-bold px-4 py-2 rounded disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                    <PaperAirplaneIcon className="h-4 w-4 -rotate-45" />
+                </button>
+            </form>
+            <div className="md:hidden">
+                <ModelSelection />
+            </div>
+        </div>
+    );
+}
+
+export default ChatGenInput;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+message = questionInput
+    // Send a request to the Flask server with the user's message
+    const response = await fetch("/api", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      // body: JSON.stringify({ messages: [{ role: "user", content: message }] }),
+      body: JSON.stringify({ messages: [{ "sender_id": "user1", "conversation_id": "1", "prompt": message, "use_history": true }] }),
+
+    });
+
+
+    // Create a new TextDecoder to decode the streamed response text
+    const decoder = new TextDecoder();
+
+    // Set up a new ReadableStream to read the response body
+    const reader = response.body.getReader();
+    let chunks = "";
+
+    // Read the response stream as chunks and append them to the chat log
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks += decoder.decode(value);
+      // solution
+
+      // Split the chunks by newline characters
+      // chunks = chunks.split('\n');
+
+      // Replace '\n' with '<br>' in the chunks
+      chunks = chunks.replace('\n', '<br>');
+
+      // Append each line with appropriate HTML formatting
+      // for (let i = 0; i < lines.length - 1; i++) {
+      //   const line = lines[i];
+      //   const p = document.createElement('p');
+      //   p.textContent = line;
+      //   soln.appendChild(p);
+      // }
+
+      // Update chunks with the last incomplete line
+      // chunks = lines[lines.length - 1];
+
+      const soln = document.getElementById(uniqueId);
+      soln.innerHTML = chunks;
+    }
+
+    markdownText = document.getElementById(uniqueId).innerText;
+    const htmlText = markdownToHtml(markdownText);
+    document.getElementById(uniqueId).innerHTML = htmlText;
+
+    // Prevent the default behavior (new line in contenteditable)
+    event.preventDefault();
+  }
+
+
+
+
+
+
+
+
+
+
+
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+Chat2.tsx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+'use client'
+
+import { collection, orderBy, query } from "firebase/firestore"
+import { useSession } from "next-auth/react"
+import { useCollection } from "react-firebase-hooks/firestore"
+import { db } from "../firebase"
+import Message from "./Message"
+import { ArrowDownCircleIcon } from "@heroicons/react/24/outline"
+import { useEffect, useState } from 'react';
+import { io } from 'socket.io-client';
+
+type Props = {
+  chatId: string
+}
+
+function Chat2({ chatId }: Props) {
+  const { data: session } = useSession()
+
+  const [messages] = useCollection(session && query(
+    collection(db, "users", session?.user?.email!, "genchats", chatId, "messages"),
+    orderBy("createdAt", "asc")
+  ))
+
+  return (
+    <div className="flex-1 overflow-y-auto overflow-x-hidden">
+      {messages?.empty && (
+        <>
+          <p className="mt-10 text-center text-white">
+            Type a prompt below to get started!
+          </p>
+          <ArrowDownCircleIcon className="h-10 w-10 mx-auto mt-5
+          text-white animate-bounce" />
+        </>
+      )}
+
+      {messages?.docs.map((message) => (
+        <Message key={message.id} message={message.data()} />
+      ))}
+    </div>
+  )
+}
+
+export default Chat2
+
+
+
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+Chat2 new
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+import { collection, addDoc, orderBy, query } from "firebase/firestore";
+import { useSession } from "next-auth/react";
+import { useCollection } from "react-firebase-hooks/firestore";
+import { db } from "../firebase";
+import Message from "./Message";
+import { ArrowDownCircleIcon } from "@heroicons/react/24/outline";
+import { useEffect, useState } from "react";
+
+
+type Props = {
+  chatId: string;
+  addMessage: (text: string) => void; // Define prop type for adding message
+};
+
+function Chat2({ chatId, addMessage }: Props) {
+  const { data: session } = useSession();
+
+  const [messages] = useCollection(
+    session &&
+      query(collection(db, "users", session?.user?.email!, "genchats", chatId, "messages"), orderBy("createdAt", "asc"))
+  );
+
+  // Function to add a new message
+  const sendMessage = async (text: string) => {
+    try {
+      // Add a new message to Firestore
+      await addDoc(collection(db, "users", session?.user?.email!, "genchats", chatId, "messages"), {
+        text: text,
+        createdAt: new Date(),
+        // Add other message properties if needed
+      });
+    } catch (error) {
+      console.error("Error adding message: ", error);
+    }
+  };
+
+  return (
+    <div className="flex-1 overflow-y-auto overflow-x-hidden">
+      {messages?.empty && (
+        <>
+          <p className="mt-10 text-center text-white">Type a prompt below to get started!</p>
+          <ArrowDownCircleIcon className="h-10 w-10 mx-auto mt-5 text-white animate-bounce" />
+        </>
+      )}
+
+      {messages?.docs.map((message) => (
+        <Message key={message.id} message={message.data()} />
+      ))}
+    </div>
+  );
+}
+
+export default Chat2;
+
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+ChatgenInput
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+'use client';
+
+import { useState, useEffect, FormEvent } from 'react';
+import { useSession } from "next-auth/react";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+// import { Message } from "@/postcss"; // Adjust the import path as needed
+import toast from "react-hot-toast";
+import useSWR from "swr";
+import PaperAirplaneIcon from '@heroicons/react/24/outline/PaperAirplaneIcon';
+import ModelSelection from './ModelSelection';
+import { db } from '@/firebase';
+
+
+type Props = {
+    chatId: string
+}
+
+function ChatGenInput({ chatId }: Props) {
+    const [prompt, setPrompt] = useState("");
+    const { data: session } = useSession();
+
+    const { data: model } = useSWR("model", {
+        fallbackData: "gpt-3.5-turbo"
+    });
+
+    const sendMessage = async (e: FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (!prompt || !session) return;
+
+        const input = prompt.trim();
+        setPrompt("");
+
+        const message: Message = {
+            text: input,
+            createdAt: serverTimestamp(),
+            user: {
+                _id: session?.user?.email!,
+                name: session?.user?.name!,
+                avatar: session?.user?.image! || `https://ui-avatars.com/api/?name=${session?.user?.name}`,
+            }
+            // type: ""
+        }
+
+        await addDoc(collection(db, 'users', session?.user?.email!, 'chats', chatId, 'messages'),
+            message
+        )
+        // await addDoc(collection(db, 'users', session.user.email, 'genchats', chatId, 'messages'), message);
+
+        const notification = toast.loading('CCLBot is thinking...');
+        try {
+            const response = await fetch('/api/askGenQuestion', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    prompt: input,
+                    chatId,
+                    session,
+                }),
+            });
+
+            const { answer } = await response.json();
+            setPrompt(answer);
+
+            // Example of sending a message from client
+            // socket.emit('message', { text: 'Hello, world!' });
+
+            // Display success toast notification
+            toast.success('CCLBot has responded', {
+                id: notification,
+            });
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    };
+
+    return (
+        <div className="sticky bg-gray-700/50 text-gray-400 rounded-lg text-sm">
+            <form onSubmit={sendMessage} className="p-5 space-x-5 flex">
+                <input
+                    className="bg-transparent focus:outline-none flex-1 disabled:cursor-not-allowed disabled:text-gray-300"
+                    disabled={!session}
+                    value={prompt}
+                    onChange={e => setPrompt(e.target.value)}
+                    type="text"
+                    placeholder="Type your message here..."
+                />
+
+                <button
+                    disabled={!prompt || !session}
+                    type="submit"
+                    className="bg-[#11A37F] hover:opacity-50 text-white font-bold px-4 py-2 rounded disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                    <PaperAirplaneIcon className="h-4 w-4 -rotate-45" />
+                </button>
+            </form>
+            <div className="md:hidden">
+                <ModelSelection />
+            </div>
+        </div>
+    );
+}
+
+export default ChatGenInput;
+
+// export default function ChatGenInput({ chatId }: Props) {
+//     const [message, setMessage] = useState<string>('');
+//     const [prompt, setPrompt] = useState("");
+//     const { data: session } = useSession();
+
+//     const sendMessage = async (e: FormEvent<HTMLFormElement>) => {
+
+//         e.preventDefault();
+//         if (!prompt || !session) return;
+
+//         const input = prompt.trim();
+//         setPrompt("");
+
+
+//         const notification = toast.loading('CCLBot is thinking...');
+
+//         const response = await fetch('/api/askGenQuestion', {
+//             method: 'POST',
+//             headers: {
+//                 'Content-Type': 'application/json',
+//             },
+//             body: JSON.stringify({
+//                 prompt: input,
+//                 chatId,
+//                 session,
+//             }),
+//         });
+
+
+
+//         const decoder = new TextDecoder();
+//         // const reader = response.body.getReader();
+//         const reader = response.body?.getReader() //.body.getReader();
+//         let chunks = "";
+
+//         while (true) {
+//             const { done, value } = await reader?.read();
+//             if (done) break;
+//             chunks += decoder.decode(value);
+
+//             chunks = chunks.replace('\n', '<br>');
+
+//             // Assuming you have uniqueId stored somewhere
+//             const soln = document.getElementById(uniqueId);
+//             if (soln) {
+//                 soln.innerHTML = chunks;
+//                 const markdownText = soln.innerText;
+//                 // const htmlText = markdownToHtml(markdownText);
+//                 const htmlText = markdownText
+//                 soln.innerHTML = htmlText;
+//             }
+//         }
+//     };
+
+//     return (
+//         <form onSubmit={sendMessage}>
+//             <input type="text" value={message} onChange={(e) => setMessage(e.target.value)} />
+//             <button type="submit">Submit</button>
+//         </form>
+//     );
+// }
+
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+Chat2
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+'use client'
+
+import { collection, addDoc, orderBy, query, onSnapshot } from "firebase/firestore";
+import { useSession } from "next-auth/react";
+import { useCollection } from "react-firebase-hooks/firestore";
+import { db } from "../firebase";
+import Message from "./Message";
+import { ArrowDownCircleIcon } from "@heroicons/react/24/outline";
+import { useEffect, useState } from "react";
+import { io } from "socket.io-client";
+
+type Props = {
+  chatId: string;
+  addMessage: (text: string) => void;
+};
+
+interface IMessage {
+  id: string;
+  // Define other properties of the message here
+}
+
+function Chat2({ chatId, addMessage }: Props) {
+  const { data: session } = useSession();
+  const [messages, setMessages] = useState<IMessage[]>([]);
+
+  useEffect(() => {
+    // Check if session and user email are available before querying Firestore
+    if (session?.user?.email) {
+      const unsubscribe = onSnapshot(
+        query(collection(db, "users", session.user.email, "genchats", chatId, "messages"), orderBy("createdAt", "asc")),
+        (snapshot) => {
+          const updatedMessages: IMessage[] = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+          setMessages(updatedMessages);
+        }
+      );
+
+      // Clean up listener on unmount
+      return () => unsubscribe();
+    }
+  }, [session, chatId]);
+
+  return (
+    <div className="flex-1 overflow-y-auto overflow-x-hidden">
+      {messages.length === 0 && (
+        <>
+          <p className="mt-10 text-center text-white">Type a prompt below to get started!</p>
+          <ArrowDownCircleIcon className="h-10 w-10 mx-auto mt-5 text-white animate-bounce" />
+        </>
+      )}
+
+      {messages.map((message) => (
+        <Message key={message.id} message={message} />
+      ))}
+    </div>
+  );
+}
+
+export default Chat2;
+
+
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+askGenQuestion
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+import { NextApiRequest, NextApiResponse } from "next"
+import query from "../../lib/queryGenApi";
+import admin from "firebase-admin";
+import { adminDB } from "@/firebaseAdmin";
+import Image from 'next/image'
+import { Server } from 'socket.io';
+
+type Data = {
+    answer: string;
+};
+
+async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
+    // const { prompt, chatId } = req.body;
+    const { prompt, chatId, session } = req.body
+
+    if (!prompt) {
+        res.status(400).json({
+            answer: 'Please provide a prompt!'
+        });
+        return;
+    }
+
+    if (!chatId) {
+        res.status(400).json({
+            answer: 'Please provide a valid chat ID!'
+        });
+        return;
+    }
+
+    try {
+        
+        const response = await query(prompt, chatId);
+        console.log('Response:', response);
+
+        const message = {
+            text: response || "CCLBot was unable to find an answer for that!",
+            user: {
+                _id: "CCLBot",
+                name: "CCLBot",
+                avatar: "/images/favicon.png",
+            }
+        };
+
+        console.log("ChatId:", chatId);
+        console.log("Message:", message);
+
+        await adminDB
+            .collection("users")
+            .doc(session?.user?.email)
+            .collection("genchats")
+            .doc(chatId)
+            .collection("messages")
+            .add(message);
+
+        res.status(200).json({
+            answer: message.text
+        });
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({
+            // answer: error.message.text
+            answer: 'error'
+        });
+    }
+}
+
+export default handler;

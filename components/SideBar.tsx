@@ -1,9 +1,10 @@
 'use client'
 
-import { ChatBubbleBottomCenterTextIcon, UserIcon, StopCircleIcon, LinkIcon, Cog6ToothIcon, QuestionMarkCircleIcon, ArrowLeftIcon, ArrowLeftStartOnRectangleIcon } from "@heroicons/react/24/outline"
+import { ChatBubbleBottomCenterTextIcon, UserIcon, StopCircleIcon, LinkIcon, Cog6ToothIcon, QuestionMarkCircleIcon, ArrowLeftIcon, ArrowLeftStartOnRectangleIcon, HomeIcon } from "@heroicons/react/24/outline"
 import { useSession, signOut } from 'next-auth/react';
 import { useCollection } from "react-firebase-hooks/firestore";
 import NewChat from '../components/NewChat'
+import NewGenChat from '../components/NewGenChat'
 import { collection, orderBy, query } from 'firebase/firestore';
 import { db } from '@/firebase';
 import ChatRow from '../components/ChatRow';
@@ -34,6 +35,7 @@ function SideBar() {
                 <div>
                     {/* NewChat*/}
                     <NewChat />
+                    {/* <NewGenChat /> */}
 
                     <div className="hidden sm:inline">
                         <ModelSelection />
@@ -54,6 +56,11 @@ function SideBar() {
 
                 </div>
             </div>
+            <a className="flex py-3 px-3 items-center gap-3 rounded-md hover:bg-gray-500/10 transition-colors duration-200 text-white cursor-pointer text-sm">
+                {/* <AiOutlineMessage className="h-4 w-4" /> */}
+                <HomeIcon className="h-4 w-4" />
+                Home
+            </a>
             <a className="flex py-3 px-3 items-center gap-3 rounded-md hover:bg-gray-500/10 transition-colors duration-200 text-white cursor-pointer text-sm">
                 {/* <AiOutlineMessage className="h-4 w-4" /> */}
                 <ChatBubbleBottomCenterTextIcon className="h-4 w-4" />

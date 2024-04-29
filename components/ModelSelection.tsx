@@ -9,7 +9,8 @@ function ModelSelection() {
   const {data: models, isLoading } = useSWR("models", fetchModels)
   const {data: model, mutate: setModel } = useSWR("model", {
 
-    fallbackData: 'const model = "gpt-3.5-turbo"'
+    // fallbackData: 'const model = "gpt-3.5-turbo"'
+    fallbackData: "gpt-3.5-turbo"
   })
   
 

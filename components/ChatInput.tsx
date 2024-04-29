@@ -24,7 +24,8 @@ function ChatInput({ chatId }: Props) {
 
     const {data: model} = useSWR("model", {
 
-        fallbackData: 'const model = "gpt-3.5-turbo"'
+        // fallbackData: 'const model = "gpt-3.5-turbo"'
+        fallbackData: "gpt-3.5-turbo"
       })
 
     // TODO: useSWR to get model

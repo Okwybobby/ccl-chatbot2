@@ -10,17 +10,23 @@ import { db } from "../firebase";
 function NewChat() {
 
   const router = useRouter();
-  const { data: session } = useSession();
-
-  const createNewChat = async () => {
+  const { data: session } = useSession();  
+  
+  const createNewChat = async () => {    
+    console.log("db: ")
+    console.dir(db)
+    console.log("Email: ", session?.user?.email!)   
+    try {
     const doc = await addDoc(
       collection(db, "users", session?.user?.email!, "chats"), {        
         userId: session?.user?.email!,
         createdAt: serverTimestamp()
       }
     )
-
     router.push(`/chat/${doc.id}`) 
+  }catch (error) {
+      console.error("Error adding document: ", error);
+    }       
 }
 
 return (
