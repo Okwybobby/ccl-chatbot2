@@ -69,6 +69,18 @@ function ChatGenInput({ chatId }: Props) {
         } catch (error) {
             console.error('Error:', error);
         }
+
+        // Listen for chunkReceived event
+        // emitter.on('chunkReceived', (chunk) => {
+        //     console.log('Streamed chunk:', chunk);
+        //     // Update UI with the received chunk (e.g., display partial response)
+        //     // You can implement logic here to update a dedicated element in the UI
+        // });
+
+        // Remember to remove the listener when the component unmounts
+        // return () => emitter.off('chunkReceived');
+        // return () => emitter.off('chunkReceived', (listener) => listener);
+
     };
 
     return (

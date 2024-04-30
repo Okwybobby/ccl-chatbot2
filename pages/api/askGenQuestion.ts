@@ -4,10 +4,18 @@ import admin from "firebase-admin";
 import { adminDB } from "@/firebaseAdmin";
 import Image from 'next/image'
 
+import eventsEmitter from '@/pages/api/eventEmitter';
+// const emitter = eventsEmitter; // or any other meaningful name
+
+
 
 type Data = {
     answer: string;
 };
+
+function streamAnswer(chunk: string, res: NextApiResponse) {
+    res.write(`data: ${JSON.stringify({ answer: chunk })}\n\n`);
+}
 
 async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
     // const { prompt, chatId } = req.body;
@@ -27,10 +35,57 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
         return;
     }
 
-    try {
-        const response = await query(prompt, chatId);
-        console.log('Response:', response);
+    // try {
+    //     const response = await query(prompt, chatId);
+    //     console.log('Response:', response);
 
+    //     const message = {
+    //         text: response || "CCLBot was unable to find an answer for that!",
+    //         user: {
+    //             _id: "CCLBot",
+    //             name: "CCLBot",
+    //             avatar: "/images/favicon.png",
+    //         }
+    //     };
+
+    //     console.log("ChatId:", chatId);
+    //     console.log("Message:", message);
+
+    //     await adminDB
+    //         .collection("users")
+    //         .doc(session?.user?.email)
+    //         .collection("genchats")
+    //         .doc(chatId)
+    //         .collection("messages")
+    //         .add(message);
+
+    //     res.status(200).json({
+    //         answer: message.text
+    //     });
+    // } catch (error) {
+    //     console.error('Error GenQuestion:', error);
+    //     res.status(500).json({
+    //         // answer: error.message.text
+    //         answer: 'error'
+    //     });
+    // }
+
+    try {
+        const response = await query(prompt, chatId, (chunk) => {
+            // Process the received chunk here (e.g., update UI)
+            console.log('Streamed chunk...:', chunk);
+            // You can call updateChatMessages(chunk) here to update chat messages
+
+            // Send chunk to client
+            // streamAnswer(chunk, res); 
+
+            // Stream the chunk to the client
+            res.write(`data: ${JSON.stringify({ chunk })}\n\n`);
+            // Emit event with the received chunk
+            // eventsEmitter.emit('chunkReceived', chunk);
+        });
+
+        console.log('Response:', response);
         const message = {
             text: response || "CCLBot was unable to find an answer for that!",
             user: {
@@ -54,6 +109,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
         res.status(200).json({
             answer: message.text
         });
+        res.end(); // End the response stream
     } catch (error) {
         console.error('Error GenQuestion:', error);
         res.status(500).json({

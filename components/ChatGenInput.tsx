@@ -1,18 +1,31 @@
+'use client'
+
 import { useState, useEffect, FormEvent } from 'react';
 import { useSession } from "next-auth/react";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import toast from "react-hot-toast";
-import useSWR from "swr";
 import PaperAirplaneIcon from '@heroicons/react/24/outline/PaperAirplaneIcon';
 import ModelSelection from './ModelSelection';
 import { db } from '@/firebase';
+import query from "../lib/queryGenApi";
+import { NextApiRequest, NextApiResponse } from "next"
+
+import eventsEmitter from '@/pages/api/eventEmitter';
+// const emitter = eventsEmitter; // or any other meaningful name
 
 type Props = {
-    chatId: string
-}
+    chatId: string;
+    sendDataToChat: (data: string) => void;
+    dataFromChat: string | null;
+    resp: string;
+};
+
+type Data = {
+    answer: string;
+};
 
 interface IMessage {
-    id: string;
+    // id: string;
     text: string;
     createdAt: Date;
     user: {
@@ -22,147 +35,246 @@ interface IMessage {
     };
 }
 
-
-function ChatGenInput({ chatId }: Props) {
-    const [prompt, setPrompt] = useState("");
+const ChatGenInput: React.FC<Props> = ({ chatId, sendDataToChat, dataFromChat }) => {
+    const [prompt, setPrompt] = useState('');
     const { data: session } = useSession();
+    // const {resp: string} = useState();
 
-    const [messages, setMessages] = useState<IMessage[]>([]);
+    const handleChat = (resp: string) => {
+        sendDataToChat(resp);
+    };
 
-    const { data: model } = useSWR("model", {
-        fallbackData: "gpt-3.5-turbo"
-    });
+    async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
+        try {
+            const response = await query(prompt, chatId, (chunk) => {
+                // Process the received chunk here (e.g., update UI)
+                console.log('Streamed chunk...---->:', chunk);
+                // You can call updateChatMessages(chunk) here to update chat messages
+
+                // Send chunk to client
+                // streamAnswer(chunk, res); 
+
+                // Stream the chunk to the client
+                res.write(`data: ${JSON.stringify({ chunk })}\n\n`);
+                // Emit event with the received chunk
+                // eventsEmitter.emit('chunkReceived', chunk);
+            })
+            console.log('Response:', response);
+            const message = {
+                text: response || "CCLBot was unable to find an answer for that!",
+                user: {
+                    _id: "CCLBot",
+                    name: "CCLBot",
+                    avatar: "/images/favicon.png",
+                }
+            };
+
+            console.log("ChatId:", chatId);
+            console.log("Message:", message);
+
+            // await adminDB
+            //     .collection("users")
+            //     .doc(session?.user?.email)
+            //     .collection("genchats")
+            //     .doc(chatId)
+            //     .collection("messages")
+            //     .add(message);
+
+            res.status(200).json({
+                answer: message.text
+            });
+            res.end(); // End the response stream
+        } catch (error) {
+            console.error('Error GenQuestion:', error);
+            res.status(500).json({
+                // answer: error.message.text
+                answer: 'error'
+            });
+        }
+    }
 
     // const sendMessage = async (e: FormEvent<HTMLFormElement>) => {
-    //     e.preventDefault();
-    //     if (!prompt || !session) return;
-
-    //     const input = prompt.trim();
-    //     setPrompt("");
-
-    //     try {
-    //         const response = await fetch('/api/askGenQuestion', {
-    //             method: 'POST',
-    //             headers: {
-    //                 'Content-Type': 'application/json',
-    //             },
-    //             body: JSON.stringify({
-    //                 prompt: input,
-    //                 chatId,
-    //                 session,
-    //             }),
-    //         });
-
-    //         const { answer } = await response.json();
-    //         // Update UI with streaming text
-    //         setPrompt(""); // Clear the prompt field
-    //         appendMessageToUI(answer); // Append the new message to the UI
-
-    //         // Display success toast notification
-    //         toast.success('CCLBot has responded');
-    //     } catch (error) {
-    //         console.error('Error ChatGenInput:', error);
-    //         toast.error('Error communicating with server');
-    //     }
-    // };
-
-    // Function to append a new message to the UI
-
-    const sendMessage = async (e: FormEvent<HTMLFormElement>) => {
+    // const sendMessage = async (e: FormEvent<HTMLFormElement>) => {
+    async function sendMessage(e: FormEvent<HTMLFormElement>) {        
         e.preventDefault();
-        console.log("Prompt: ", prompt);
-        console.log("Session: ", session);
-
         if (!prompt || !session) return;
 
-        try {
-            //Toast notification to say loading!
-            const notificaiton = toast.loading('CCLBot is thinking...')
+        const input = prompt.trim();
+        setPrompt('');
 
-            const response = await fetch('http://54.174.77.47/api/v1/chat/stream', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    sender_id: "1",
-                    conversation_id: "1",
-                    prompt: prompt,
-                    use_history: "false"
-                }),
-                // body: JSON.stringify({ prompt, chatId, session }),
-            });
-
-            if (!response.ok) {
-                throw new Error(`Failed to fetch: ${response.status}`);
-                // throw new Error('Failed to fetch');
-            }
-
-            const reader = response.body?.getReader();
-            if (!reader) {
-                throw new Error('Response body is not readable');
-            }
-
-            let messages = []; // Array to store received messages
-            let result = '';
-
-            while (true) {
-                const { done, value } = await reader.read();
-                // console.log(value, "... ")
-                if (done) {
-                    console.log('Stream has ended');
-                    toast.success('CCLBot has responded', {
-                        id: notificaiton,
-                    }
-                    )
-                    break;
-                }
-
-                console.log(new TextDecoder().decode(value));
-                result += new TextDecoder().decode(value);
-
-                const messageText = new TextDecoder().decode(value);
-                // messages.push({
-                //     text: messageText, createdAt: new Date(), user: {
-                //         _id: "CCLBot",
-                //         name: "CCLBot",
-                //         avatar: "/images/favicon.png"
-                //     }
-                // });
-
-                // Update UI with the received message chunk (call a function in Chat2.tsx)
-                // updateChatMessages(messageText); // This function needs to be implemented in Chat2.tsx
-                // messages = []; // Reset the messages array for the next iteration
-            }
-        } catch (error) {
-            console.error('!!!Error ChatGenInput:', error);
-            toast.error('Error communicating with server');
-        }
-    };
-
-    // Function to update chat messages in Chat2.tsx (implementation in next step)
-    const updateChatMessages = (messages: string) => {
-        console.log(messages)
-        // setMessages((prevMessages) => [...prevMessages, ...newMessages]);
-        // Implement logic to update the state or props in Chat2.tsx to reflect the new messages
-    };
-
-
-
-    const appendMessageToUI = async (messageText: string) => {
         const message: Message = {
-            text: messageText,
-            createdAt: new Date(),
+            text: input,
+            createdAt: serverTimestamp(),
             user: {
                 _id: session?.user?.email!,
                 name: session?.user?.name!,
                 avatar: session?.user?.image! || `https://ui-avatars.com/api/?name=${session?.user?.name}`,
-            }
+            },
         };
 
-        // Add the message to Firestore
         await addDoc(collection(db, 'users', session?.user?.email!, 'chats', chatId, 'messages'), message);
+
+        const notification = toast.loading('CCLBot is thinking...');
+        // try {
+        //     const response = await fetch('/api/askGenQuestion', {
+        //         method: 'POST',
+        //         headers: {
+        //             'Content-Type': 'application/json',
+        //         },
+        //         body: JSON.stringify({
+        //             prompt: input,
+        //             chatId,
+        //             session,
+        //         }),
+        //     });
+
+        //     const { answer } = await response.json();
+        //     setPrompt(answer);
+        //     // Display success toast notification
+        //     toast.success('CCLBot has responded', {
+        //         id: notification,
+        //     });
+        // } 
+
+
+        // try {
+        //     const eventSource = new EventSource('/api/askGenQuestion', {
+        //       withCredentials: true, // Ensure credentials are sent
+        //     });
+
+        //     eventSource.onmessage = (event) => {
+        //       const { chunk } = JSON.parse(event.data);
+        //       console.log("Chunk data----->", chunk)
+        //       setPrompt((prevPrompt) => prevPrompt + chunk); // Concatenate new chunk to existing prompt
+        //     };
+
+        //     eventSource.onerror = (error) => {
+        //       console.error('EventSource error:', error);
+        //       // Handle error if necessary
+        //     };
+
+        //     // Send input prompt to the server
+        //     await fetch('/api/askGenQuestion', {
+        //       method: 'POST',
+        //       headers: {
+        //         'Content-Type': 'application/json',
+        //       },
+        //       body: JSON.stringify({
+        //         prompt: input,
+        //         chatId,
+        //         session,
+        //       }),
+        //     });
+
+        //     // Display success toast notification
+        //     toast.success('CCLBot has responded', {
+        //       id: notification,
+        //     });
+        //   }
+        // catch (error) {
+        //     console.error('Error:', error);
+        // }
+        console.error('EEEEEE');
+        console.error(prompt);
+        console.error(chatId);
+        try {
+            const response = await query(prompt, chatId, (chunk) => {
+                // Process the received chunk here (e.g., update UI)
+                console.log('Streamed chunk...---->:', chunk);
+                // You can call updateChatMessages(chunk) here to update chat messages
+
+                // Send chunk to client                              
+            })
+            console.log('Response:', response);
+            const message = {
+                text: response || "CCLBot was unable to find an answer for that!",
+                user: {
+                    _id: "CCLBot",
+                    name: "CCLBot",
+                    avatar: "/images/favicon.png",
+                }
+            };
+
+            console.log("ChatId:", chatId);
+            console.log("Message:", message);
+
+            // await adminDB
+            //     .collection("users")
+            //     .doc(session?.user?.email)
+            //     .collection("genchats")
+            //     .doc(chatId)
+            //     .collection("messages")
+            //     .add(message);
+
+            // res.status(200).json({
+            //     answer: message.text
+            // });   
+            toast.success('CCLBot has responded');        
+        } catch (error) {
+            console.error('Error GenQuestion:', error);
+            // res.status(500).json({
+            //     // answer: error.message.text
+            //     answer: 'error'
+            // });
+        }
+
     };
+
+
+    //     // Listen for chunkReceived event
+    //     emitter.on('chunkReceived', (chunk) => {
+    //         console.log('Streamed geninput chunk:', chunk);
+    //         // Update UI with the received chunk (e.g., display partial response)
+
+    //         handleChat(chunk)
+
+    //         // You can implement logic here to update a dedicated element in the UI
+    //     });
+
+    //     // Remember to remove the listener when the component unmounts
+    //     // return () => emitter.off('chunkReceived');
+    //     return () => emitter.off('chunkReceived', (listener) => listener);
+    // };
+
+    // useEffect(() => {
+    //     console.log('Adding event listener for chunkReceived');
+    //     const handleChunkReceived = (chunk: string) => {
+    //         console.log('Streamed geninput chunk:', chunk);
+    //         // Update UI with the received chunk (e.g., display partial response)
+    //         handleChat(chunk);
+    //     };
+
+    //     // Add event listener when component mounts
+    //     eventsEmitter.on('chunkReceived', handleChunkReceived);
+
+    //     // Remove event listener when component unmounts
+    //     return () => {
+    //         console.log('Removing event listener for chunkReceived');
+    //         eventsEmitter.off('chunkReceived', handleChunkReceived);
+    //     };
+    // }); // Empty dependency array ensures that this effect runs only once, when the component mounts
+
+    useEffect(() => {
+        const eventSource = new EventSource('/api/askGenQuestion');
+
+        eventSource.onmessage = (event) => {
+            const { answer } = JSON.parse(event.data);
+            setPrompt(answer);
+            // Display success toast notification
+            toast.success('CCLBot has responded');
+        };
+
+        eventSource.onerror = (error) => {
+            console.error('EventSource error:', error);
+            // Handle error if necessary
+        };
+
+        return () => {
+            eventSource.close(); // Close EventSource connection when component unmounts
+        };
+    }, []); // Empty dependency array ensures this effect runs only once when the component mounts
+
+
 
     return (
         <div className="sticky bg-gray-700/50 text-gray-400 rounded-lg text-sm">
@@ -189,6 +301,6 @@ function ChatGenInput({ chatId }: Props) {
             </div>
         </div>
     );
-}
+};
 
 export default ChatGenInput;
