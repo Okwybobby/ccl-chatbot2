@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import PaperAirplaneIcon from '@heroicons/react/24/outline/PaperAirplaneIcon';
 import ModelSelection from './ModelSelection';
 import { db } from '@/firebase';
+import useSWR from "swr";
 // import query from "../lib/queryGenApi";
 // import query from '@/pages/api/queryGenApi2';
 import { NextApiRequest, NextApiResponse } from "next"

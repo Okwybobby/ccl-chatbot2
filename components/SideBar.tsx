@@ -10,6 +10,8 @@ import { db } from '@/firebase';
 import ChatRow from '../components/ChatRow';
 import ModelSelection from "./ModelSelection";
 import ChatGenRow from "./ChatGenRow";
+// import {useRouter} from "next/router";
+import { useRouter } from 'next/navigation'; // Import useRouter hook
 
 // import {
 //     AiOutlineMessage,
@@ -18,8 +20,11 @@ import ChatGenRow from "./ChatGenRow";
 //     AiOutlineSetting,
 //   } from "react-icons/ai";
 
+
+
 function SideBar() {
     const { data: session } = useSession();
+    const router = useRouter();
 
     const [chats, loading, error] = useCollection(
         session &&
@@ -40,6 +45,13 @@ function SideBar() {
         )
 
     )
+
+    const handleHomeClick = async () => {
+        // Navigate to the proposal page                   
+        console.log('Home...')
+        router.push(`/`)
+        // router.push('/proposal'); // Modify the path as needed
+      };
 
     return (
         <div className="p-2 flex flex-col h-screen" >
@@ -80,7 +92,8 @@ function SideBar() {
 
                 </div>
             </div>
-            <a className="flex py-3 px-3 items-center gap-3 rounded-md hover:bg-gray-500/10 transition-colors duration-200 text-white cursor-pointer text-sm">
+            <a onClick={handleHomeClick}
+            className="flex py-3 px-3 items-center gap-3 rounded-md hover:bg-gray-500/10 transition-colors duration-200 text-white cursor-pointer text-sm">
                 {/* <AiOutlineMessage className="h-4 w-4" /> */}
                 <HomeIcon className="h-4 w-4" />
                 Home
