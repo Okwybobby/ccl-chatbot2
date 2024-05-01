@@ -47,12 +47,13 @@
 
 
 const query = async (input: string, chatId: string, onChunkReceived?: (chunk: string) => void) => {
+    console.log('OKWY....')
     try {
         const response = await fetch('http://54.174.77.47/api/v1/chat/stream', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Origin': 'http://localhost:3000',
                 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
             },
             body: JSON.stringify({

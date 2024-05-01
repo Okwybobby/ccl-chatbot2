@@ -12,14 +12,23 @@ import { ArrowDownCircleIcon } from "@heroicons/react/24/outline"
 // }
 
 interface Props {
-  sendDataToChat: (data: string) => void;
-  dataFromChat: string | null;
-  chatId: string
+  // sendDataToChatInput: (data: string) => void;
+  // dataFromChatInput: string | null;
+  chatId: string;
 }
 
 // function Chat2({ chatId }: Props) {
-  const Chat2: React.FC<Props> = ({ chatId, dataFromChat }) => {
+  // const Chat2: React.FC<Props> = ({ chatId, sendDataToChatInput, dataFromChatInput }) => {
+  const Chat2: React.FC<Props> = ({ chatId }) => {
   const { data: session } = useSession()
+
+  // const handleChat = () => {
+  //   sendDataToChatInput('Data from Child Component A');
+  // };
+
+  // const handleChatClear = () => {
+  //   sendDataToChatInput(' ');
+  // };
 
   const [messages] = useCollection(session && query(
     collection(db, "users", session?.user?.email!, "chats", chatId, "messages"),
@@ -42,7 +51,8 @@ interface Props {
         <Message key={message.id} message={message.data()} />
       ))}
 
-      <p className="text-orange-100">Data from stream: {dataFromChat}</p>
+      {/* <p className="text-orange-100">Data from stream: {dataFromChatInput}</p> */}
+      <p className="text-orange-100">Data from stream: {}</p>
     </div>
   )
 }

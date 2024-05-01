@@ -12,7 +12,7 @@ async function handler(
     req: NextApiRequest,
     res: NextApiResponse<Data>
 ) {
-    const { prompt, chatId, session } = req.body
+    const { prompt, chatId, model, session } = req.body
     
 
     if (!prompt) {
@@ -33,7 +33,7 @@ async function handler(
     
     // ChatGPT Query
     // const response: string | Choice = await query(prompt, chatId, model)
-    const response = await query(prompt, chatId)
+    const response = await query(prompt, chatId, model)
 
     const message: Message = {
         text: response || "CCLBot was unable to find an answer for that!",
@@ -51,11 +51,11 @@ async function handler(
         }
     }
 
-    // console.log("Session:", session);
-    // console.log("Users:", session?.user);
-    // console.log("Email:", session?.user?.email);
-    // console.log("ChatId:", chatId);
-    // console.log("Message:", message);
+    console.log("Session:", session);
+    console.log("Users:", session?.user);
+    console.log("Email:", session?.user?.email);
+    console.log("ChatId:", chatId);
+    console.log("Message:", message);
 
     await adminDB
     .collection("users")

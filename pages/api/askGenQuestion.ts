@@ -71,16 +71,29 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
     // }
 
     try {
+
+        console.log('askgenquestion...:');
+
+        // Added the missing res.writeHead call here:
+        res.writeHead(200, {
+            'Content-Type': 'text/event-stream',
+            // ... other headers (if needed)
+        });
+
         const response = await query(prompt, chatId, (chunk) => {
             // Process the received chunk here (e.g., update UI)
             console.log('Streamed chunk...:', chunk);
             // You can call updateChatMessages(chunk) here to update chat messages
 
+            // response = response + chunk
             // Send chunk to client
             // streamAnswer(chunk, res); 
 
             // Stream the chunk to the client
-            res.write(`data: ${JSON.stringify({ chunk })}\n\n`);
+            res.write(`event: chunk\n`);
+            res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+
+            // res.write(`data: ${JSON.stringify({ chunk })}\n\n`);
             // Emit event with the received chunk
             // eventsEmitter.emit('chunkReceived', chunk);
         });
@@ -98,24 +111,26 @@ async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
         console.log("ChatId:", chatId);
         console.log("Message:", message);
 
-        await adminDB
-            .collection("users")
-            .doc(session?.user?.email)
-            .collection("genchats")
-            .doc(chatId)
-            .collection("messages")
-            .add(message);
+        // await adminDB
+        //     .collection("users")
+        //     .doc(session?.user?.email)
+        //     .collection("genchats")
+        //     .doc(chatId)
+        //     .collection("messages")
+        //     .add(message);
 
-        res.status(200).json({
-            answer: message.text
-        });
-        res.end(); // End the response stream
     } catch (error) {
         console.error('Error GenQuestion:', error);
         res.status(500).json({
             // answer: error.message.text
             answer: 'error'
         });
+    } finally {
+        // Important: Close the connection to prevent resource leaks
+        // res.status(200).json({
+        //     answer: message.text
+        // });
+        res.end();
     }
 }
 

@@ -70,14 +70,27 @@ function ChatPage2({params: {id}}: Props) {
     sendDataToChat("");
   };
 
+  // const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState<string[]>([]);
+
+  const updateMessages = (data: string) => {
+    console.log('Received message chunk:', data); // Add console log here
+    setMessages([...messages, data]); // Update messages state with received data
+  };
+
+
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       {/* <p>Hello</p> */}
       {/* <ChildComponentA sendDataToA={sendDataToA} dataFromB={dataFromB} /> */}
-      <Chat2 chatId={id} dataFromChat={dataFromChat} sendDataToChat={function (data: string): void {
+      {/* <Chat2 chatId={id} dataFromChat={dataFromChat} sendDataToChat={function (data: string): void {
         throw new Error('Function not implemented.');
-      } }/>
-      <ChatGenInput chatId={id} sendDataToChat={sendDataToChat} dataFromChat={null} resp={''}/>
+      } }/> */}
+        {/* <Chat2 chatId={id} dataFromChat={dataFromChat}/> */}
+        <Chat2 chatId={id}/>
+      {/* <ChatGenInput chatId={id} sendDataToChat={sendDataToChat} dataFromChat={null} resp={''}/> */}
+      {/* <ChatGenInput chatId={id} sendDataToChat={sendDataToChat} dataFromChat={null} resp={''}/> */}
+      <ChatGenInput chatId={id} updateMessages={updateMessages}/>
     </div>
   )
 
