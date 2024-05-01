@@ -45,6 +45,7 @@ function SideBar() {
         )
 
     )
+    
 
     const handleHomeClick = async () => {
         // Navigate to the proposal page                   
