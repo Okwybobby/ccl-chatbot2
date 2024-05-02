@@ -33,7 +33,8 @@ async function handler(
     
     // ChatGPT Query
     // const response: string | Choice = await query(prompt, chatId, model)
-    const response = await query(prompt, chatId, model)
+    // const response = await query(prompt, chatId, model)
+    const response = await query(prompt, chatId)
 
     const message: Message = {
         text: response || "CCLBot was unable to find an answer for that!",
